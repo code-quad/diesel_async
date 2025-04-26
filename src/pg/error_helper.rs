@@ -58,7 +58,7 @@ impl From<tokio_postgres::error::DbError> for PostgresDbErrorWrapper {
     fn from(value: tokio_postgres::error::DbError) -> Self {
         let message = value
             .where_()
-            .map(|w| format!("{}\nWHERE: {}", value.message(), w));
+            .map(|w| format!("{}; WHERE: {}", value.message(), w));
 
         PostgresDbErrorWrapper(value, message)
     }
