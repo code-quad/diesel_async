@@ -37,7 +37,7 @@ pub(super) fn from_tokio_postgres_error(
 
             diesel::result::Error::DatabaseError(
                 kind,
-                Box::new(PostgresDbErrorWrapper(
+                Box::new(PostgresDbErrorWrapper::from(
                     postgres_error
                         .source()
                         .and_then(|e| e.downcast_ref::<tokio_postgres::error::DbError>().cloned())
@@ -52,11 +52,21 @@ pub(super) fn from_tokio_postgres_error(
     }
 }
 
-struct PostgresDbErrorWrapper(tokio_postgres::error::DbError);
+struct PostgresDbErrorWrapper(tokio_postgres::error::DbError, Option<String>);
+
+impl From<tokio_postgres::error::DbError> for PostgresDbErrorWrapper {
+    fn from(value: tokio_postgres::error::DbError) -> Self {
+        let message = value
+            .where_()
+            .map(|w| format!("{}; WHERE: {}", value.message(), w));
+
+        PostgresDbErrorWrapper(value, message)
+    }
+}
 
 impl diesel::result::DatabaseErrorInformation for PostgresDbErrorWrapper {
     fn message(&self) -> &str {
-        self.0.message()
+        self.1.as_deref().unwrap_or(self.0.message())
     }
 
     fn details(&self) -> Option<&str> {
