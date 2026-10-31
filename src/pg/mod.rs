@@ -358,7 +358,7 @@ impl AsyncPgConnection {
     ///     .await
     /// # }
     /// ```
-    pub fn build_transaction(&mut self) -> TransactionBuilder<Self> {
+    pub fn build_transaction(&mut self) -> TransactionBuilder<'_, Self> {
         TransactionBuilder::new(self)
     }
 

@@ -37,7 +37,11 @@ impl RowSealed for MysqlRow {}
 
 impl<'a> diesel::row::Row<'a, Mysql> for MysqlRow {
     type InnerPartialRow = Self;
-    type Field<'b> = MysqlField<'b> where Self: 'b, 'a: 'b;
+    type Field<'b>
+        = MysqlField<'b>
+    where
+        Self: 'b,
+        'a: 'b;
 
     fn field_count(&self) -> usize {
         self.0.columns_ref().len()
@@ -117,7 +121,7 @@ impl<'a> diesel::row::Row<'a, Mysql> for MysqlRow {
         Some(field)
     }
 
-    fn partial_row(&self, range: std::ops::Range<usize>) -> PartialRow<Self::InnerPartialRow> {
+    fn partial_row(&self, range: std::ops::Range<usize>) -> PartialRow<'_, Self::InnerPartialRow> {
         PartialRow::new(self, range)
     }
 }

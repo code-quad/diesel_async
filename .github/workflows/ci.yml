@@ -247,11 +247,30 @@ jobs:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.78.0
       - uses: dtolnay/rust-toolchain@nightly
-      - uses: taiki-e/install-action@cargo-hack
-      - uses: taiki-e/install-action@cargo-minimal-versions
-      - name: Check diesel-async
-        # cannot test mysql yet as that crate
-        # has broken min-version dependencies
-        # cannot test sqlite yet as that crate
-        # as broken min-version dependencies as well
-        run: cargo +1.78.0 minimal-versions check -p diesel-async --features "postgres bb8 deadpool mobc"
+      - name: Isolate library MSRV dependencies
+        # Examples are checked in the main matrix; their newer TLS dependencies
+        # must not change the library-only minimum-version dependency resolution.
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, shutil
+          destination = pathlib.Path(os.environ["RUNNER_TEMP"]) / "diesel-async-msrv"
+          destination.mkdir()
+          for directory in ["src", "tests"]:
+              shutil.copytree(directory, destination / directory)
+          manifest = pathlib.Path("Cargo.toml").read_text()
+          workspace = manifest.index("\n[workspace]\n")
+          (destination / "Cargo.toml").write_text(manifest[:workspace])
+          PY
+      - name: Check diesel-async with Rust 1.78
+        working-directory: ${{ runner.temp }}/diesel-async-msrv
+        env:
+          CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
+        run: |
+          cargo +nightly generate-lockfile -Z minimal-versions
+          # Cargo 1.78 reads version-3 lockfiles; dependency entries are unchanged.
+          python3 - <<'PY'
+          import pathlib
+          lockfile = pathlib.Path("Cargo.lock")
+          lockfile.write_text(lockfile.read_text().replace("version = 4\n", "version = 3\n", 1))
+          PY
+          cargo +1.78.0 check --locked --features "postgres bb8 deadpool mobc"
