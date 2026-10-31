@@ -67,7 +67,7 @@ where
     /// #     )").execute(conn).await?;
     /// conn.build_transaction()
     ///     .read_only()
-    ///     .run::<_, diesel::result::Error, _>(|conn| Box::pin(async move {
+    ///     .run::<(), diesel::result::Error, _>(|conn| Box::pin(async move {
     ///         let read_attempt = users.select(name).load::<String>(conn).await;
     ///         assert!(read_attempt.is_ok());
     ///
